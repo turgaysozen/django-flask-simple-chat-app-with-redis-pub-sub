@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+    db:
+       image: nouchka/sqlite3:latest
+       volumes:
+         - ./data/db:/root/db
+       environment:
+         - SQLITE3_DB=db.sqlite3
+    flask:
+      container_name: flask
+      build: .
+      command: bash -c "cd flask && python3.9 app.py"
+      ports:
+        - 8001:5000
+      depends_on:
+        - redis
+    django:
+      container_name: django
+      build: .
+      command: bash -c "cd django_app && python3.9 manage.py makemigrations && python3.9 manage.py migrate && python3.9 manage.py runserver 0.0.0.0:8000"
+      ports:
+        - 8000:8000
+      depends_on:
+        - db
+        - redis
+    redis:
+      container_name: redis
+      image: redis
+      ports:
+        - 6379:6379
