@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
+    <style> body { max-width: 95%; margin: auto; padding: 1em; background: black; color: #fff; font: 25px/1.6 menlo, monospace; }</style>
 </head>
 <body>
     <h4>Enter Your Name and Press Enter</h4>
-    <form action="/login" method="post">
-        User: <input name="user">
+    <form action="/flask/login" method="post">
+        User: <input id="user" name="user">
     </form>
 </body>
 </html>

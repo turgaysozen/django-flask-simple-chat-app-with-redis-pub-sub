@@ -1,14 +1,43 @@
 <!doctype html>
 <title>chat</title>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-<style>body { max-width: 500px; margin: auto; padding: 1em; background: black; color: #fff; font: 16px/1.6 menlo, monospace; }</style>
+ <style>body { max-width: 500px; margin: auto; padding: 1em; background: black; color: #fff; font: 20px/1.6 menlo, monospace; }</style>
+      <!-- <style>
+            /* Default styles */
+            body { 
+                max-width: 95%; 
+                margin: auto; 
+                padding: 1em; 
+                background: black; 
+                color: #fff; 
+                font: 25px/1.6 menlo, monospace; 
+            }
+            /* Media query for screens smaller than 600px */
+            @media only screen and (max-width: 600px) {
+                body {
+                    max-width: 100%;
+                    padding: 0.5em;
+                    font-size: 25px;
+                }
+                #in {
+                    width: 100%;
+                }
+            }
+	   #in {
+	      width: 80%;
+	      height: 30px;
+	   }
+	   input[type='text'] {
+ 	      -webkit-appearance: none;
+	   }
+        </style> -->
 <p><b>Hi, {{ user }}!</b></p>
-<p>Message: <input id="in" /></p>
+<p>Message: <input id="in" name="refresh" /></p>
 <pre id="out"></pre>
 <script>
     function sse() {
-        var source = new EventSource('/stream');
-        var out = document.getElementById('out');
+        var source = new EventSource('/flask/stream');
+	var out = document.getElementById('out');
         source.onmessage = function(e) {
             console.log(e.data)
             out.innerHTML =  e.data + "\n" + out.innerHTML;
@@ -16,7 +45,7 @@
     }
     $('#in').keyup(function(e){
         if (e.keyCode == 13) {
-            $.post('/post', {'message': $(this).val()});
+            $.post('/flask/post', {'message': $(this).val()});
             $(this).val('');
         }
     });

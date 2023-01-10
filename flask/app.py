@@ -4,53 +4,65 @@ from flask import (
     redirect,
     render_template,
     request,
-    session,
+    session
 )
 
-
-import datetime
+import time
+from datetime import datetime
 import redis
-
 
 app = Flask(__name__)
 app.secret_key = 'app_secret'
-publisher = redis.Redis(host='redis', port=6379)
+redis = redis.Redis(host='redis', port=6379)
 
-
-@app.route('/')
+@app.route('/flask/')
 def index():
     if 'user' not in session:
-        return redirect('/login')
+        return redirect('/flask/login')
+    session["refreshed"] = True
     return render_template('chat.html', user=session['user'])
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/flask/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         session['user'] = request.form['user']
-        return redirect('/')
+        return redirect('/flask')
     return render_template('login.html')
 
 
-@app.route('/post', methods=['POST'])
+@app.route('/flask/post', methods=['POST'])
 def post():
     message = request.form['message']
     user = session.get('user', 'anonymous')
-    now = datetime.datetime.now().replace(microsecond=0).time()
-    publisher.publish('chat', '[%s] - %s: %s' % (now.isoformat(), user, message))
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    redis.publish('chat', '[%s] - %s: %s' % (now, user, message))
+
+    # Store the message in Redis cache
+    message = '[%s] - %s: %s' % (now, user, message)
+    added = redis.zadd('messages', {message: time.time()}, nx=True, ch=True)
+    if added:
+        redis.expire('messages', 600)  # set ttl to 10 mins
     return Response(status=204)
 
 
-@app.route('/stream')
+@app.route('/flask/stream')
 def stream():
-    return Response(event_stream(), mimetype="text/event-stream")
+    if session.get("refreshed"):
+        session["refreshed"] = False
+        return Response(event_stream(refreshed=True), mimetype="text/event-stream")
+    return Response(event_stream(refreshed=False), mimetype="text/event-stream")
 
+def event_stream(refreshed):
+    messages = redis.zrange('messages', 0, -1)
+    if refreshed:
+        for message in messages:
+            yield 'data: %s\n\n' % message.decode('utf-8')
 
-def event_stream():
-    pubsub = publisher.pubsub(ignore_subscribe_messages=True)
+    pubsub = redis.pubsub(ignore_subscribe_messages=True)
     pubsub.subscribe('chat')
-    for message in pubsub.listen():
-        yield 'data: %s\n\n' % message['data'].decode('utf-8')
+    for pub_message in pubsub.listen():
+        yield 'data: %s\n\n' % pub_message["data"].decode('utf-8')
 
 
 if __name__ == '__main__':
