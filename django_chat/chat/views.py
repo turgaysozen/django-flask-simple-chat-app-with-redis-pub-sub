@@ -9,7 +9,7 @@ publisher = redis.Redis(host='redis', port=6379)
 
 def index(request):
     if 'user' not in request.session:
-        return redirect('/login')
+        return redirect('/django/login')
     return render(request, 'chat.html', {'user': request.session['user']})
 
 
@@ -17,7 +17,7 @@ def index(request):
 def login(request):
     if request.method == 'POST':
         request.session['user'] = request.POST.get('user')
-        return redirect('/')
+        return redirect('/django')
     return render(request, 'login.html')
 
 
